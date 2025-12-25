@@ -1,0 +1,38 @@
+#!/bin/bash -e
+
+# check whether Apple Silicon (M1 mac) or Intel Mac
+arch_name="$(uname -m)"
+if [ "${arch_name}" = "x86_64" ]; then
+    if [ "$(sysctl -in sysctl.proc_translated)" = "1" ]; then
+        echo "Running on Rosetta 2"
+    else
+        echo "Running on native Intel"
+    fi
+    echo "This installer is only for Apple Silicon. Use update_intelmac.sh to install on this Mac."
+    exit 1
+elif [ "${arch_name}" = "arm64" ]; then
+    echo "Running on Apple Silicon (M1 mac)"
+else
+    echo "Unknown architecture: ${arch_name}"
+    exit 1
+fi
+
+# Maybe required for Apple Silicon (M1 mac) when installing mambaforge
+ulimit -n 99999
+
+COLABFOLDDIR="$1"
+if [ ! -d "$COLABFOLDDIR/colabfold-conda" ]; then
+    echo "Error! colabfold-conda directory is not present in $COLABFOLDDIR."
+    exit 1
+fi
+
+# activate conda in $COLABFOLDDIR/conda
+source "${COLABFOLDDIR}/conda/etc/profile.d/conda.sh"
+conda activate "$COLABFOLDDIR/colabfold-conda"
+
+# reinstall colabfold
+"$COLABFOLDDIR/colabfold-conda/bin/pip" install --no-warn-conflicts --upgrade --force-reinstall \
+    "colabfold[alphafold] @ git+https://github.com/sokrypton/ColabFold"
+"$COLABFOLDDIR/colabfold-conda/bin/pip" install jax==0.4.23 jaxlib==0.4.23
+"$COLABFOLDDIR/colabfold-conda/bin/pip" install "colabfold[alphafold]"
+"$COLABFOLDDIR/colabfold-conda/bin/pip" install silence_tensorflow
